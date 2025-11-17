@@ -29,9 +29,7 @@ cat("Reading AOP extent...\n")
 AOP<-st_read(paste0("./Shapefiles/",site,"_AOP.shp"))%>%
   st_transform(5070)
 
-grid <- st_make_grid(AOP, cellsize = 100, square = TRUE)#%>%
-  # st_transform(5070)
-
+grid <- st_make_grid(AOP, cellsize = 100, square = TRUE)
 #plot(grid)
 #plot(AOP, add=TRUE)
 
@@ -52,10 +50,15 @@ crowns_assigned_df <- data.frame()
 
 for (i in seq_along(files)) {
 
-  file<-files[4]
+  file<-files[i]
   cat("(", i, "/", length(files), ") Processing:", basename(file), "\n")
   
   crowns<-st_read(paste0("./Outputs/",product,"/",site,"/",file))
+  if (nrow(crowns) == 0) {
+    cat("   -> No crowns found; skipping.\n")
+    next
+  }
+
   crowns$crown_id<-1:nrow(crowns)
   #plot(crowns)
   grid<-st_transform(grid, st_crs(crowns))
@@ -69,18 +72,19 @@ for (i in seq_along(files)) {
   }
   
   # 3. Calculate overlap area
+  print("3.")
   intersections <- intersections %>%
     mutate(overlap_area = as.numeric(st_area(.)))
   
   # 4. For each crown, find the grid cell with the largest overlap
+  print("4.")
   assignment <- intersections %>%
     group_by(crown_id) %>%
     slice_max(overlap_area, n = 1, with_ties = FALSE) %>%
-    ungroup() %>%
-    select(crown_id, grid_id)
+    ungroup() 
   
   # 5. Join back to crowns
-  crowns <- left_join(crowns, as.data.frame(assignment)[,c(1:2)], by = "crown_id")
+  crowns <- left_join(crowns, as.data.frame(assignment)[,c("crown_id","grid_id")], by = "crown_id")
   
   ####Take area, perimeter, and Heights ####
   crowns$Area <- as.numeric(st_area(crowns))
