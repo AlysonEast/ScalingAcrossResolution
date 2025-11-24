@@ -34,18 +34,15 @@ cat("Site:", site, "\n")
 
 #### Make 1ha Processing Grid ####
 cat("Reading AOP extent...\n")
+cat("Reading AOP extent...\n")
 AOP<-st_read(paste0("./Shapefiles/",site,"_AOP.shp"))%>%
   st_transform(5070)
 
 grid <- st_make_grid(AOP, cellsize = 100, square = TRUE)
-#plot(grid)
-#plot(AOP, add=TRUE)
-
+grid <- st_sf(data.frame(grid_id=1:length(grid)), geometry = grid)
 grid <- st_intersection(AOP, grid)
-#plot(grid)
-grid$grid_id<-1:nrow(grid)
 
-cat("Grid created with", nrow(grid), "cells.\n")
+cat("Grid created with", dim(table(grid$grid_id)), "cells.\n")
 
 #### Process shape files to have information for Size-Abundance Scaling
 files <- list.files(paste0("./Outputs/", product, "/", site, "/"),
@@ -126,5 +123,5 @@ out_file <- paste0("../ScalingAcrossResolution/CrownDatasets/",
                    site, "_", product, "_trees_", 
                    substr(file, (nchar(file)-17), (nchar(file)-4)),
                    ".csv")
-write.csv(crowns_assigned_df, out_file, row.names = FALSE)
+write.csv(crowns_assigned_df[,-14], out_file, row.names = FALSE)
 cat("Final dataset written to", out_file, "\n")
