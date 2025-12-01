@@ -1,35 +1,34 @@
 # ScalingAcrossResolutions
 
-> **⚠️ DEVELOPMENT STATUS:** This repository is under active development. Currently operational for NAIP 30cm at HARV. NEON 10cm baseline analysis in progress. BART site and MAXAR products planned for future integration.
+> **⚠️ DEVELOPMENT STATUS:** This repository is under active development. Currently operational for NAIP 30cm at HARV. NEON 10cm baseline analysis in progress.
 
 ## Overview
 
-This repository performs Bayesian size-abundance analysis on tree crown segmentation outputs to validate their utility for recovering forest demographic relationships across different imagery sources and resolutions. Using the [ScalingFromSky](https://github.com/ForestScaling/ScalingFromSky) R package, we estimate two critical ecological parameters at 1-hectare resolution:
+This repository performs Bayesian size-abundance analysis on tree crown segmentation outputs from the [Crown_Segmentation](../Crown_Segmentation) repository to validate their utility for recovering forest demographic relationships. Using the [ScalingFromSky](https://github.com/ForestScaling/ScalingFromSky) R package, we estimate two critical ecological parameters at 1-hectare resolution:
 
 - **α (alpha)**: Power-law exponent describing the steepness of the size-abundance relationship
 - **Ntot**: Total number of trees above a minimum size threshold
 
-These parameters enable:
-1. Comparison of crown segmentation quality across data sources
-2. Assessment of resolution impacts on ecological inference
-3. Validation of coarser imagery (NAIP, MAXAR) against NEON baseline
+These parameters enable comparison of crown segmentation quality across data sources and assessment of resolution impacts on ecological inference.
 
 ---
 
 ## Repository Relationship
 
 ```
-Crown_Segmentation → ScalingAcrossResolutions
-    ├── Tree crown shapefiles
-    ├── Crown metrics (DBH, height, area)
-    └── Grid cell assignments
+Crown_Segmentation 
+    ├── Tree crown shapefiles (outputs)
+    ├── CHM rasters (LiDAR)
+    └── Site shapefiles (AOP extent, grids)
                 ↓
+ScalingAcrossResolutions
+    ├── Crown dataset preparation
+    ├── LAI data extraction
     ├── Bayesian parameter recovery
-    ├── Cross-product comparisons
-    └── Spatial validation
+    └── Cross-product validation
 ```
 
-**Input:** CSV files from Crown_Segmentation containing tree-level metrics assigned to 1-hectare grid cells  
+**Input:** Crown segmentation shapefiles from Crown_Segmentation  
 **Output:** Spatially explicit α and Ntot estimates for each imagery product at each site
 
 ---
@@ -43,45 +42,9 @@ Crown_Segmentation → ScalingAcrossResolutions
 | HARV | NAIP | 60 cm | 📋 Planned | Medium |
 | HARV | MAXAR | ~30 cm | 📋 Planned | Low |
 | BART | NAIP | 30 cm | 📋 Planned | Medium |
-| BART | NEON (Weinstein) | 10 cm | 📋 Planned | Medium |
+| BART | NEON | 10 cm | 📋 Planned | Medium |
 
-**Note:** Each data stream can be processed independently as crown segmentation outputs become available. The workflow is designed for incremental analysis.
-
----
-
-## Conceptual Workflow
-
-### Scientific Motivation
-
-Remote sensing-based crown segmentation systematically underdetects small trees due to canopy occlusion. While field-measured size distributions follow a negative power law (many small trees, few large trees), remotely sensed data show truncated distributions. 
-
-This workflow uses Bayesian methods to:
-1. Identify the size threshold (xbreakpoint) above which trees are reliably detected
-2. Fit a Pareto distribution to the observable portion
-3. Infer the abundance of missing understory trees
-4. Recover complete size-abundance relationships
-
-### Workflow Stages
-
-```
-Stage 1: Data Preparation
-├── Crown datasets from Crown_Segmentation
-├── Grid cell assignments (1 hectare)
-├── Extract auxiliary LAI data
-└── Filter minimum crown thresholds
-
-Stage 2: Bayesian Parameter Recovery
-├── Kernel density estimation on DBH
-├── Determine truncation breakpoint
-├── Fit α using truncated Pareto + LAI prior
-└── Estimate Ntot integrating uncertainty
-
-Stage 3: Validation & Comparison
-├── Compare to NEON 10cm baseline
-├── Cross-product statistical tests
-├── Generate spatial rasters
-└── Validation figures
-```
+Each data stream can be processed independently as crown segmentation outputs become available.
 
 ---
 
@@ -89,617 +52,536 @@ Stage 3: Validation & Comparison
 
 ```
 ScalingAcrossResolutions/
-├── README.md                          # This file
-├── WORKFLOW.md                        # Detailed execution guide
-├── config/
-│   ├── sites.yaml                     # Site parameters (UTM zones, paths)
-│   ├── products.yaml                  # Product specifications
-│   └── analysis_params.yaml           # Bayesian priors, thresholds
+├── README.md
+├── Old/                               # Archived scripts (pre-reorganization)
 ├── data_preparation/
-│   ├── 01_prepare_crown_datasets.R    # Prep crown CSVs from shapefiles
-│   ├── 02_extract_grid_lai.R          # Extract LAI for each grid cell
-│   └── slurm/
-│       ├── slurm_01_prepare_batch.sh  # Batch submission wrapper
-│       └── slurm_01_prepare_array.sh  # Array job for parallel prep
+│   ├── GenerateDatasetsIndv.R         # Process single shapefile → CSV with DBH
+│   ├── GenerateDatasets_Batch.sh     # Auto-detect files, submit array job
+│   ├── GenerateDatasets_Slurm.sh     # SLURM array job wrapper
+│   └── ExtractGridLAI.R              # Extract LAI for each 1-ha grid cell
 ├── analysis/
-│   ├── 03_estimate_alpha_ntot.R       # Serial parameter estimation
-│   ├── 03_estimate_alpha_ntot_parallel.R  # Parallel estimation
-│   ├── 04_compare_across_products.R   # Statistical comparisons
-│   ├── 05_spatial_validation.R        # Generate rasters, spatial analysis
-│   ├── 06_validate_against_baseline.R # Compare to NEON 10cm
-│   └── 07_dbh_distribution_comparison.R  # Distribution-level comparisons
-├── slurm/
-│   ├── slurm_03_alpha_array.sh        # Array jobs (1 core per task)
-│   ├── slurm_03_alpha_multicore.sh    # Multicore jobs (8 cores per task)
-│   └── logs/                          # SLURM output logs
+│   ├── RecoverAlpha.R                # Serial parameter estimation (testing)
+│   ├── RecoverAlphaParallel.R        # Parallel parameter estimation (production)
+│   ├── Alpha_Slurm.sh                # SLURM array job (1 core/task)
+│   └── Alpha_Slurm_multicore.sh      # SLURM array job (8 cores/task)
 ├── data/
-│   ├── crown_datasets/                # Input from Crown_Segmentation
-│   │   ├── HARV/
-│   │   │   ├── NAIP_30cm/
-│   │   │   │   └── NAIP_30cm_HARV_7_{TILE}_trees.csv
-│   │   │   ├── NEON_10cm/
-│   │   │   │   └── NEON_10cm_HARV_7_{TILE}_trees.csv
-│   │   │   ├── NAIP_60cm/
-│   │   │   └── MAXAR_30cm/
-│   │   └── BART/
-│   │       ├── NAIP_30cm/
-│   │       └── NEON_10cm/
-│   ├── auxiliary/
-│   │   └── lai/
-│   │       ├── HARV_grid_lai.csv
-│   │       └── BART_grid_lai.csv
-│   └── reference/                     # Validation data
-│       └── FIA/                       # For prior calibration
-├── results/
-│   ├── parameters/                    # Alpha and Ntot estimates
-│   │   ├── HARV/
-│   │   │   ├── NAIP_30cm/
-│   │   │   │   ├── alpha.csv
-│   │   │   │   ├── ntot.csv
-│   │   │   │   ├── diagnostics.csv
-│   │   │   │   └── chunks/           # Intermediate chunk results
-│   │   │   └── NEON_10cm/            # **Baseline**
-│   │   │       ├── alpha.csv
-│   │   │       ├── ntot.csv
-│   │   │       └── diagnostics.csv
-│   │   └── BART/
-│   ├── comparisons/                   # Cross-product analyses
-│   │   ├── HARV_resolution_comparison.csv
-│   │   ├── HARV_product_comparison.csv
-│   │   └── HARV_vs_baseline_validation.csv
-│   └── spatial/                       # Raster outputs (generated later)
-│       ├── HARV_NAIP_30cm_alpha.tif
-│       ├── HARV_NAIP_30cm_ntot.tif
-│       ├── HARV_NEON_10cm_alpha.tif
-│       └── HARV_NEON_10cm_ntot.tif
-├── figures/
-│   ├── distributions/                 # DBH distributions
-│   ├── parameters/                    # Alpha/Ntot by product
-│   ├── comparisons/                   # Cross-product plots
-│   └── maps/                          # Spatial rasters
-
+│   ├── CrownDatasets/                # Crown datasets with DBH estimates
+│   │   └── {SITE}_{PRODUCT}_trees_{TILE}.csv
+│   ├── LAI/                          # Auxiliary LAI data
+│   │   └── {SITE}_gridLAI.csv
+│   └── NEON_LAI_download.R           # Download NEON LAI rasters
+├── Results/
+│   └── Parameters/
+│       └── {SITE}/{PRODUCT}/
+│           ├── Chunks/               # Chunk results from parallel processing
+│           │   ├── {SITE}_{PRODUCT}_chunk{N}_alpha.csv
+│           │   └── {SITE}_{PRODUCT}_chunk{N}_trees.csv
+│           ├── alpha.csv             # Aggregated results (future)
+│           └── ntot.csv              # Aggregated results (future)
+└── outfiles/                         # SLURM output logs
+    └── out_*.out
 ```
 
 ---
 
-## Quick Start
-
-### Prerequisites
-
-**Software:**
-- R 4.4.0+
-- SLURM scheduler (for HPC execution)
-- ScalingFromSky R package
-
-**R Packages:**
-```r
-# Core analysis
-install.packages("ScalingFromSky")  # From GitHub or local .tar.gz
-install.packages(c("sf", "dplyr", "rstan", "posterior", "VGAM"))
-
-# Spatial processing
-install.packages(c("terra", "raster", "itcSegment"))
-```
-
-**Data:**
-- Crown datasets from Crown_Segmentation (CSV format)
-- NEON LAI data downloaded
-- Site shapefiles (AOP extent, grid definitions)
-
-
-### Running a Complete Data Stream (Example: HARV NAIP 30cm)
-
-**Step 1: Prepare Crown Datasets**
-```bash
-cd data_preparation/slurm
-export PRODUCT="NAIP_30cm"
-export SITE="HARV"
-bash slurm_01_prepare_batch.sh
-```
-
-**Step 2: Extract LAI**
-```bash
-Rscript ../02_extract_grid_lai.R NAIP_30cm HARV
-```
-
-**Step 3: Estimate Parameters**
-```bash
-cd ../../slurm
-# Option A: Array jobs (many small tasks)
-sbatch slurm_03_alpha_array.sh NAIP_30cm HARV
-
-# Option B: Multicore (fewer large tasks)
-sbatch slurm_03_alpha_multicore.sh NAIP_30cm HARV
-```
-
-**Step 4: Aggregate Results**
-```bash
-cd ../analysis
-Rscript 04_aggregate_results.R NAIP_30cm HARV
-```
-
-See [`WORKFLOW.md`](WORKFLOW.md) for detailed step-by-step instructions.
-
----
-
-## Processing Strategy by Data Stream
-
-### Current Priority: NEON 10cm Baseline (HARV)
-
-The NEON 10cm dataset (Weinstein et al. 2019) serves as the **ground truth baseline** for all comparisons. Complete this first:
-
-```bash
-# 1. Prepare NEON crown datasets
-export PRODUCT="NEON_10cm"
-export SITE="HARV"
-cd data_preparation/slurm
-bash slurm_01_prepare_batch.sh
-
-# 2. Extract LAI (if not already done)
-cd ..
-Rscript 02_extract_grid_lai.R NEON_10cm HARV
-
-# 3. Estimate parameters (multicore recommended for baseline)
-cd ../slurm
-sbatch slurm_03_alpha_multicore.sh NEON_10cm HARV
-
-# 4. Validate baseline quality
-cd ../analysis
-Rscript 08_validate_baseline_quality.R NEON_10cm HARV
-```
-
-### Incremental Addition of Data Streams
-
-As new crown segmentation outputs become available from Crown_Segmentation:
-
-**For each new product:**
-1. Crown_Segmentation generates shapefiles → CSV datasets
-2. Run data preparation (Steps 1-2 above) for that product
-3. Run parameter estimation (Step 3) for that product
-4. Compare to baseline (Step 4+)
-
-**Example: Adding NAIP 60cm later**
-```bash
-export PRODUCT="NAIP_60cm"
-export SITE="HARV"
-# Run steps 1-3 independently
-# Then compare to NEON_10cm baseline
-Rscript analysis/06_validate_against_baseline.R NAIP_60cm HARV
-```
-
----
-
-## Data Preparation Details
+## Workflow
 
 ### Stage 1: Crown Dataset Preparation
 
-**Script:** `data_preparation/01_prepare_crown_datasets.R`
+Crown segmentation shapefiles from Crown_Segmentation are converted to analysis-ready CSV files with DBH estimates and 1-hectare grid assignments.
 
-**Purpose:** Convert crown segmentation shapefiles to analysis-ready CSV files with:
-- Grid cell assignments (1 hectare)
-- Crown metrics (area, perimeter, diameter)
-- Tree heights from CHM
-- DBH estimates from allometric equations
+**Workflow execution:**
 
-**Input:**
-- Shapefiles: `../Crown_Segmentation/Outputs/{PRODUCT}/{SITE}/*.shp`
-- Grid shapefile: `../Crown_Segmentation/Shapefiles/{SITE}_grid.shp`
-- CHM rasters: NEON LiDAR data
-
-**Output:**
-- `data/crown_datasets/{SITE}/{PRODUCT}/{PRODUCT}_{SITE}_{TILE}_trees.csv`
-
-**Columns in output CSV:**
-```
-crown_id, grid_id, image_path, Area, Perimeter, Diameter, Max_Height, DBH
-```
-
-**Execution:**
 ```bash
-# Single tile (for testing)
-Rscript data_preparation/01_prepare_crown_datasets.R 1 NAIP_30cm HARV
+cd data_preparation
 
-# All tiles (parallel via SLURM array)
-cd data_preparation/slurm
-export PRODUCT="NAIP_30cm"
-export SITE="HARV"
-bash slurm_01_prepare_batch.sh
+# Set variables for your data stream
+export PRODUCT="NAIP"  # or "NEON", "MAXAR"
+export SITE="HARV"     # or "BART"
+
+# Auto-detect shapefiles and submit array job
+bash GenerateDatasets_Batch.sh
 ```
 
-**Key Parameters:**
-- `grid_cellsize`: 100 m (1 hectare)
-- Minimum crown threshold: Configurable in `config/analysis_params.yaml`
+**What happens:**
+1. `GenerateDatasets_Batch.sh` counts shapefiles in `../Crown_Segmentation/Outputs/{PRODUCT}/{SITE}/`
+2. Submits `GenerateDatasets_Slurm.sh` as array job (one task per shapefile)
+3. Each task runs `GenerateDatasetsIndv.R` to process one tile:
+   - Loads shapefile
+   - Creates/loads 1-ha grid for site
+   - Assigns each crown to grid cell (largest overlap)
+   - Calculates crown area, perimeter, diameter
+   - Extracts height from CHM
+   - Estimates DBH using allometric equations
+   - Saves: `data/CrownDatasets/{SITE}_{PRODUCT}_trees_{TILE}.csv`
+
+**Script locations:**
+- Main script: `data_preparation/GenerateDatasetsIndv.R`
+- Batch wrapper: `data_preparation/GenerateDatasets_Batch.sh` (executes Slurm script)
+- SLURM submission: `data_preparation/GenerateDatasets_Slurm.sh`
+
+**Key parameters:**
+- Working directory: `/fs/ess/PUOM0017/ForestScaling/DeepForest`
+- Grid cell size: 100 m (1 hectare)
 - CHM height filter: Trees with CHM < 3m excluded
+- Allometric biome code: 0 (temperate)
 
----
-
-### Stage 2: LAI Extraction
-
-**Script:** `data_preparation/02_extract_grid_lai.R`
-
-**Purpose:** Extract mean Leaf Area Index (LAI) for each 1-hectare grid cell. LAI is used as an environmental covariate to inform Bayesian priors for α estimation.
-
-**Input:**
-- NEON LAI rasters: `DP3.30012.001` product
+**Outputs:**
+- Crown datasets: `data/CrownDatasets/{SITE}_{PRODUCT}_trees_{TILE}.csv`
 - Grid shapefile: `../Crown_Segmentation/Shapefiles/{SITE}_grid.shp`
 
-**Output:**
-- `data/auxiliary/lai/{SITE}_grid_lai.csv`
-
-**Columns:**
-```
-grid_id, lai_val
-```
-
-**Execution:**
-```bash
-Rscript data_preparation/02_extract_grid_lai.R NAIP_30cm HARV
-```
-
-**Notes:**
-- LAI extraction is site-specific, not product-specific
-- Run once per site, reuse for all products at that site
-- Handles tile mosaicking for grid cells at tile boundaries
-
 ---
 
-## Analysis Details
+### Stage 2: LAI Data Extraction
+
+Extract mean Leaf Area Index (LAI) for each 1-hectare grid cell. LAI is used as an environmental covariate for Bayesian priors in parameter estimation.
+
+**Execution:**
+
+```bash
+cd data_preparation
+
+# Download NEON LAI rasters (if not already downloaded)
+Rscript ../data/NEON_LAI_download.R
+
+# Extract LAI for site
+Rscript ExtractGridLAI.R
+```
+
+**What happens:**
+1. Loads NEON LAI rasters (2019, 1m resolution)
+2. For each NEON tile, mosaics neighboring tiles (handles edge grid cells)
+3. Extracts mean LAI for each 1-ha grid cell
+4. Saves: `data/LAI/{SITE}_gridLAI.csv`
+
+**Note:** LAI extraction is **site-specific, not product-specific**. Run once per site, reuse for all products.
+
+**Outputs:**
+- LAI dataset: `data/LAI/{SITE}_gridLAI.csv`
+
+---
 
 ### Stage 3: Bayesian Parameter Recovery
 
-**Scripts:** 
-- `analysis/03_estimate_alpha_ntot.R` (serial, for testing)
-- `analysis/03_estimate_alpha_ntot_parallel.R` (production)
+Estimate α and Ntot for each 1-hectare grid cell using the ScalingFromSky package.
 
-**Purpose:** Estimate α and Ntot for each 1-hectare grid cell using the ScalingFromSky package.
+#### Testing (Serial Processing)
 
-**Method:**
-
-1. **Kernel Density Estimation (KDE):** Identify potential breakpoint (xbreakpoint) where size distribution transitions from truncated to theoretical
-2. **Stage 1 - Estimate α:** Fit truncated Pareto distribution to DBH values above xbreakpoint using Bayesian inference with LAI-informed priors
-3. **Stage 2 - Estimate Ntot:** Integrate uncertainty from Stage 1 to estimate total tree abundance
-
-**Input:**
-- Crown datasets: `data/crown_datasets/{SITE}/{PRODUCT}/*.csv`
-- LAI data: `data/auxiliary/lai/{SITE}_grid_lai.csv`
-
-**Output:**
-- `results/parameters/{SITE}/{PRODUCT}/chunks/chunk_{N}_alpha.csv`
-- `results/parameters/{SITE}/{PRODUCT}/chunks/chunk_{N}_ntot.csv`
-
-**Execution:**
-
-**Testing (single grid cell):**
 ```bash
-Rscript analysis/03_estimate_alpha_ntot.R
-# Edit script to specify PRODUCT, SITE, and grid_id
+cd analysis
+
+# Edit RecoverAlpha.R to set product/site and test subset
+Rscript RecoverAlpha.R
 ```
 
-**Production (parallel):**
+Use for initial testing on small subsets (hardcoded to process specific tiles currently).
+
+#### Production (Parallel Processing)
+
 ```bash
-cd slurm
+cd analysis
 
-# Option A: Array jobs (recommended for initial testing)
-# - 1 core per task
-# - Good for debugging
-# - Easy to restart failed tasks
-sbatch slurm_03_alpha_array.sh NAIP_30cm HARV
+# Option A: Array jobs (1 core per task)
+# Good for: Initial runs, debugging, reprocessing failed cells
+sbatch Alpha_Slurm.sh
 
-# Option B: Multicore (recommended for production)
-# - 8 cores per task
-# - Faster overall
-# - More efficient for large runs
-sbatch slurm_03_alpha_multicore.sh NAIP_30cm HARV
+# Option B: Multicore (8 cores per task)  
+# Good for: Production runs with stable parameters
+sbatch Alpha_Slurm_multicore.sh
 ```
 
-**Parallel Processing Configuration:**
+**What happens:**
+1. Loads all crown datasets for site/product
+2. Loads LAI data
+3. Divides grid cells into chunks (50 cells per chunk)
+4. For each chunk (parallel via SLURM array):
+   - For each grid cell with ≥75 crowns:
+     - Runs kernel density estimation on DBH
+     - Determines truncation breakpoint
+     - Fits α using Stan (Bayesian MCMC)
+     - Estimates Ntot integrating α uncertainty
+5. Saves chunk results: `Results/Parameters/{SITE}/{PRODUCT}/Chunks/`
 
-**Array Jobs:**
+**Script details:**
+- Main script: `analysis/RecoverAlphaParallel.R`
+- SLURM submission: `analysis/Alpha_Slurm.sh` (1 core) or `Alpha_Slurm_multicore.sh` (8 cores)
+- Working directory: `/fs/ess/PUOM0017/ForestScaling/ScalingAcrossResolution`
+
+**Key parameters:**
 - Chunk size: 50 grid cells per task
-- Total tasks: ceil(num_grids / 50)
-- Memory: 64 GB per task
-- Time: 5 hours per task
-- **Use when:** Testing, debugging, or reprocessing failed cells
+- Minimum crowns: 75 per grid cell
+- Prior mean: 1.4 (LAI-informed)
+- Prior SD: 0.3
+- Stan chains: 4
+- Stan iterations: 2000
 
-**Multicore:**
-- Cores per task: 8
-- Chunk size: 50 grid cells per task
-- Memory: 64 GB per task
-- Time: 5 hours per task
-- **Use when:** Production runs with stable parameters
-
-**Key Parameters** (in `config/analysis_params.yaml`):
-```yaml
-alpha_estimation:
-  prior_mean: 1.4        # LAI-informed prior for α
-  prior_sd: 0.3
-  min_crowns: 75         # Minimum crowns per grid cell
-  breakpoint_method: "kde"
-
-ntot_estimation:
-  integrate_alpha_uncertainty: true
-```
+**Outputs:**
+- `Results/Parameters/{SITE}/{PRODUCT}/Chunks/{SITE}_{PRODUCT}_chunk{N}_alpha.csv`
+- `Results/Parameters/{SITE}/{PRODUCT}/Chunks/{SITE}_{PRODUCT}_chunk{N}_trees.csv`
 
 ---
 
-### Stage 4: Result Aggregation
+## Adding a New Data Stream
 
-**Script:** `analysis/04_aggregate_results.R`
+When Crown_Segmentation completes outputs for a new product:
 
-**Purpose:** Combine chunk results into final site/product-level parameter estimates.
-
-**Input:**
-- Chunk files: `results/parameters/{SITE}/{PRODUCT}/chunks/chunk_*_alpha.csv`
-
-**Output:**
-- `results/parameters/{SITE}/{PRODUCT}/alpha.csv` (all grid cells)
-- `results/parameters/{SITE}/{PRODUCT}/ntot.csv` (all grid cells)
-- `results/parameters/{SITE}/{PRODUCT}/diagnostics.csv` (convergence metrics)
-
-**Execution:**
 ```bash
-Rscript analysis/04_aggregate_results.R NAIP_30cm HARV
-```
+# 1. Set environment variables
+export PRODUCT="NEON"  # New product
+export SITE="HARV"
 
-**Diagnostics Included:**
-- Rhat (convergence diagnostic, should be < 1.1)
-- Effective sample size (ESS)
-- R² from KDE fit
-- Number of crowns per grid cell
+# 2. Prepare crown datasets
+cd data_preparation
+bash GenerateDatasets_Batch.sh
+
+# Wait for completion (~30-45 min for HARV)
+
+# 3. Extract LAI (skip if already done for this site)
+Rscript ExtractGridLAI.R
+
+# 4. Estimate parameters
+cd ../analysis
+sbatch Alpha_Slurm_multicore.sh  # Or Alpha_Slurm.sh for array version
+
+# Monitor progress
+squeue -u $USER
+tail outfiles/out_*.out
+
+# 5. Results will be in Results/Parameters/{SITE}/{PRODUCT}/Chunks/
+```
 
 ---
 
-### Stage 5: Cross-Product Comparisons
+## NEON 10cm Baseline (Priority 1)
 
-**Script:** `analysis/05_compare_across_products.R`
+The NEON 10cm dataset (Weinstein et al. 2019) serves as the **baseline** for all comparisons.
 
-**Purpose:** Statistical comparison of parameter estimates across imagery products.
+**Why baseline:**
+- Highest resolution (10 cm) captures more small trees
+- Published validation against field data
+- DeepForest was trained on this resolution
+- Ground truth for validating other products
 
-**Input:**
-- Parameter CSVs for multiple products at same site
+**Processing steps:**
 
-**Output:**
-- `results/comparisons/{SITE}_resolution_comparison.csv`
-- `results/comparisons/{SITE}_product_comparison.csv`
-- Comparison figures in `figures/comparisons/`
-
-**Analyses:**
-- ANOVA comparing α and Ntot across products
-- Pairwise tests between products
-- Effect size calculations
-- Distribution comparisons
-
-**Execution:**
 ```bash
-Rscript analysis/05_compare_across_products.R HARV
+export PRODUCT="NEON"
+export SITE="HARV"
+
+# Stage 1: Crown datasets
+cd data_preparation
+bash GenerateDatasets_Batch.sh
+
+# Stage 2: LAI (if not done)
+Rscript ExtractGridLAI.R
+
+# Stage 3: Parameters (use multicore for baseline)
+cd ../analysis
+sbatch Alpha_Slurm_multicore.sh
+
+# After completion, validate quality
+# (validation scripts to be added)
 ```
 
 ---
 
-### Stage 6: Baseline Validation
+## Script Execution Flow
 
-**Script:** `analysis/06_validate_against_baseline.R`
+### Crown Dataset Generation
 
-**Purpose:** Validate parameter recovery quality by comparing each product to NEON 10cm baseline.
-
-**Input:**
-- Baseline: `results/parameters/{SITE}/NEON_10cm/alpha.csv`
-- Test product: `results/parameters/{SITE}/{PRODUCT}/alpha.csv`
-
-**Output:**
-- `results/comparisons/{SITE}_{PRODUCT}_vs_baseline.csv`
-- Validation metrics: RMSE, bias, R², Pearson correlation
-- Scatter plots and residual plots
-
-**Execution:**
-```bash
-# Validate NAIP 30cm against baseline
-Rscript analysis/06_validate_against_baseline.R NAIP_30cm HARV
-
-# Validate all products at HARV against baseline
-Rscript analysis/06_validate_against_baseline.R ALL HARV
+```
+GenerateDatasets_Batch.sh
+    ├── Counts shapefiles in Crown_Segmentation/Outputs/
+    ├── Sets PRODUCT and SITE environment variables
+    └── Submits → GenerateDatasets_Slurm.sh (array job)
+                      └── Runs → GenerateDatasetsIndv.R (per shapefile)
+                                     ├── Loads shapefile
+                                     ├── Assigns to grid
+                                     ├── Calculates crown metrics
+                                     ├── Extracts CHM height
+                                     ├── Estimates DBH
+                                     └── Saves CSV
 ```
 
-**Key Validation Metrics:**
-- **RMSE (Root Mean Square Error):** Overall prediction error
-- **Bias:** Systematic over/underestimation
-- **R²:** Proportion of variance explained
-- **Spatial correlation:** How well spatial patterns are preserved
+### LAI Extraction
 
----
-
-### Stage 7: DBH Distribution Comparisons
-
-**Script:** `analysis/07_dbh_distribution_comparison.R`
-
-**Purpose:** Compare DBH distributions between products to assess detection biases.
-
-**Input:**
-- Crown datasets: `data/crown_datasets/{SITE}/{PRODUCT}/*.csv`
-
-**Output:**
-- `results/comparisons/{SITE}_dbh_distributions.csv`
-- Distribution plots in `figures/distributions/`
-
-**Analyses:**
-- Kolmogorov-Smirnov tests
-- Median/quantile comparisons
-- Detection rates by size class
-- Truncation point identification
-
-**Execution:**
-```bash
-Rscript analysis/07_dbh_distribution_comparison.R HARV
+```
+ExtractGridLAI.R (standalone)
+    ├── Loads NEON LAI rasters
+    ├── Mosaics tiles
+    ├── Extracts mean LAI per grid cell
+    └── Saves LAI dataset
 ```
 
----
+### Parameter Estimation
 
-### Stage 8: Spatial Raster Generation
-
-**Script:** `analysis/08_generate_spatial_rasters.R`
-
-**Purpose:** Convert grid-based parameter estimates to continuous raster surfaces for spatial visualization and analysis.
-
-**Input:**
-- Parameter CSVs: `results/parameters/{SITE}/{PRODUCT}/alpha.csv`
-- Grid shapefile: `../Crown_Segmentation/Shapefiles/{SITE}_grid.shp`
-
-**Output:**
-- `results/spatial/{SITE}_{PRODUCT}_alpha.tif`
-- `results/spatial/{SITE}_{PRODUCT}_ntot.tif`
-
-**Execution:**
-```bash
-# Generate rasters after parameter estimation is complete
-Rscript analysis/08_generate_spatial_rasters.R NAIP_30cm HARV
 ```
-
-**Note:** Raster generation happens AFTER parameter estimation for each data stream, not during.
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**1. "Not enough crowns to fit model"**
+Alpha_Slurm.sh (or Alpha_Slurm_multicore.sh)
+    └── Runs → RecoverAlphaParallel.R (per chunk)
+                   ├── Loads crown datasets
+                   ├── Loads LAI data
+                   ├── Processes assigned grid cells
+                   │   ├── KDE on DBH
+                   │   ├── Fit α (Stan)
+                   │   └── Estimate Ntot
+                   └── Saves chunk results
 ```
-Error: Grid cell X has only 45 crowns, minimum is 75
-```
-**Solution:** Grid cells with <75 crowns are skipped automatically. This is expected at forest edges. Adjust `min_crowns` in config if needed.
-
-**2. "No matching LAI values"**
-```
-Error: No LAI data found for grid cell 123
-```
-**Solution:** Ensure `02_extract_grid_lai.R` completed successfully. Check LAI raster coverage matches AOP extent.
-
-**3. Stan convergence warnings**
-```
-Warning: Rhat > 1.1 for parameter alpha
-```
-**Solution:** Check diagnostics.csv. High Rhat indicates poor convergence. May need more iterations or better priors.
-
-**4. Missing CHM data**
-```
-Error: CHM raster not found for tile X
-```
-**Solution:** Verify NEON LiDAR data downloaded. Check paths in `config/sites.yaml`.
-
-**5. SLURM job array exceeds limit**
-```
-Error: Array index exceeds number of files
-```
-**Solution:** Check number of shapefiles in Crown_Segmentation outputs. Batch script auto-detects count.
-
-### Getting Help
-
-1. Check `docs/troubleshooting.md` for detailed solutions
-2. Review SLURM logs in `slurm/logs/`
-3. Open an issue on GitHub with:
-   - Product and site name
-   - Error message
-   - Relevant log files
-
----
-
-## Data Stream Checklist
-
-Use this checklist when adding a new product to the analysis:
-
-### ✅ **NEON 10cm Baseline (HARV)** - Priority 1
-- [ ] Crown datasets prepared
-- [ ] LAI extracted
-- [ ] Parameters estimated (alpha, Ntot)
-- [ ] Results aggregated
-- [ ] Quality validation performed
-- [ ] Documented as baseline
-
-### 📋 **NAIP 30cm (HARV)** - Complete
-- [x] Crown datasets prepared
-- [x] LAI extracted (reuse from NEON)
-- [x] Parameters estimated
-- [x] Results aggregated
-- [x] Compared to baseline
-- [x] Validated
-
-### 📋 **NAIP 60cm (HARV)** - Future
-- [ ] Crown segmentation complete (Crown_Segmentation)
-- [ ] Crown datasets prepared
-- [ ] LAI extracted (reuse)
-- [ ] Parameters estimated
-- [ ] Compared to baseline
-- [ ] DBH distribution analysis
-
-### 📋 **MAXAR 30cm (HARV)** - Future
-- [ ] Crown segmentation complete (Crown_Segmentation)
-- [ ] Crown datasets prepared
-- [ ] LAI extracted (reuse)
-- [ ] Parameters estimated
-- [ ] Compared to baseline
-- [ ] Multi-spectral band analysis
-
-### 📋 **BART Site** - Future
-- [ ] NEON 10cm baseline
-- [ ] NAIP 30cm
-- [ ] Cross-site comparison with HARV
 
 ---
 
 ## Output File Formats
 
-### Parameter Estimates (alpha.csv, ntot.csv)
+### Crown Datasets
 
-```csv
-grid_id,variable,mean,median,sd,mad,q5,q95,rhat,ess_bulk,ess_tail,R2_kernel,site,product
-1,alpha,1.42,1.41,0.08,0.07,1.29,1.56,1.01,2847,3012,0.94,HARV,NAIP_30cm
-```
+**Location:** `data/CrownDatasets/{SITE}_{PRODUCT}_trees_{TILE}.csv`
 
 **Columns:**
-- `grid_id`: 1-hectare grid cell identifier
-- `variable`: Parameter name (alpha or N_tot)
-- `mean`, `median`: Posterior summary statistics
-- `sd`, `mad`: Standard deviation, median absolute deviation
-- `q5`, `q95`: 5th and 95th percentiles (90% credible interval)
-- `rhat`: Convergence diagnostic (< 1.1 is good)
-- `ess_bulk`, `ess_tail`: Effective sample sizes
-- `R2_kernel`: KDE fit quality
-- `site`, `product`: Metadata
-
-### Comparison Results
-
-```csv
-product,site,alpha_mean,alpha_sd,ntot_mean,ntot_sd,rmse_vs_baseline,bias_vs_baseline,r2_vs_baseline,n_grids
-NAIP_30cm,HARV,1.45,0.12,487,156,0.08,-0.03,0.87,438
 ```
+crown_id      : Unique crown identifier within tile
+grid_id       : 1-hectare grid cell ID
+image_path    : Source image filename
+Area          : Crown area (m²)
+Perimeter     : Crown perimeter (m)
+Diameter      : Crown diameter (m)
+Max_Height    : Maximum height from CHM (m)
+DBH           : Estimated diameter at breast height (cm)
+score         : Model confidence score
+label         : Tree label (from segmentation)
+```
+
+### LAI Datasets
+
+**Location:** `data/LAI/{SITE}_gridLAI.csv`
+
+**Columns:**
+```
+grid_id    : 1-hectare grid cell ID
+lai_val    : Mean LAI value
+```
+
+### Parameter Results (Chunks)
+
+**Location:** `Results/Parameters/{SITE}/{PRODUCT}/Chunks/{SITE}_{PRODUCT}_chunk{N}_alpha.csv`
+
+**Columns:**
+```
+variable    : Parameter name (alpha)
+mean        : Posterior mean
+median      : Posterior median
+sd          : Standard deviation
+mad         : Median absolute deviation
+q5          : 5th percentile
+q95         : 95th percentile
+rhat        : Convergence diagnostic (< 1.1 good)
+ess_bulk    : Effective sample size (bulk)
+ess_tail    : Effective sample size (tail)
+R2_kernel   : KDE fit quality
+grid        : Grid cell ID
+site        : Site code (HARV, BART)
+```
+
+Similar format for `_trees.csv` (Ntot estimates).
+
+---
+
+## Monitoring Jobs
+
+```bash
+# Check job status
+squeue -u $USER
+
+# Monitor in real-time
+watch -n 30 'squeue -u $USER'
+
+# Check specific job output
+tail -f outfiles/out_JOBID_TASKID.out
+
+# Count completed chunks
+ls Results/Parameters/HARV/NAIP/Chunks/*.csv | wc -l
+
+# Check for errors
+grep -i error outfiles/out_*.out
+```
+
+---
+
+## Troubleshooting
+
+**"Not enough data to fit model"**
+- Grid cells with <75 crowns are automatically skipped
+- Expected for edge cells and sparse areas
+- Not an error
+
+**"No matching LAI values"**
+- Ensure `ExtractGridLAI.R` completed successfully
+- Check `data/LAI/{SITE}_gridLAI.csv` exists
+
+**"Array index exceeds number of shapefiles"**
+- `GenerateDatasets_Batch.sh` counts wrong number of files
+- Check shapefiles exist in `../Crown_Segmentation/Outputs/{PRODUCT}/{SITE}/`
+
+**"CHM raster not found"**
+- CHM paths are hardcoded in `GenerateDatasetsIndv.R`
+- Verify CHM rasters exist in `../Crown_Segmentation/LiDAR/NEON/`
+
+**Stan convergence warnings (Rhat > 1.1)**
+- Check individual grid cell diagnostics
+- May need to adjust priors or increase iterations
+- Acceptable for small percentage of cells
+
+---
+
+## Data Requirements
+
+### From Crown_Segmentation
+- Crown segmentation shapefiles: `../Crown_Segmentation/Outputs/{PRODUCT}/{SITE}/*.shp`
+- Site shapefiles: `../Crown_Segmentation/Shapefiles/{SITE}_AOP.shp`
+- CHM rasters: `../Crown_Segmentation/LiDAR/NEON/{SITE}/DP3.30015.001/.../CHM.tif`
+
+### NEON Data Portal
+- LAI rasters: DP3.30012.001 (2019)
+- Download via: `data/NEON_LAI_download.R`
+
+### Storage Requirements
+- Crown datasets: ~500 MB per site
+- LAI rasters: ~2 GB per site
+- Results (chunks): ~50 MB per product per site
+
+---
+
+## Software Requirements
+
+### R Packages
+```r
+# Core analysis
+library(ScalingFromSky)  # GitHub or local install
+library(sf)
+library(dplyr)
+library(rstan)
+library(posterior)
+library(VGAM)
+
+# Spatial processing
+library(terra)
+library(raster)
+library(itcSegment)
+
+# NEON data access
+library(neonUtilities)
+library(neonOS)
+
+# Optional (for parallel processing)
+library(future)
+library(future.apply)
+```
+
+### System Requirements
+- R 4.4.0+
+- SLURM scheduler
+- GDAL 3.7.3
+- PROJ 9.2.1
+
+### HPC Modules (OSC)
+```bash
+module load gcc/12.3.0
+module load R/4.4.0
+module load proj/9.2.1
+module load gdal/3.7.3
+```
+
+---
+
+## Workflow Example: Complete Data Stream
+
+Processing NAIP 30cm at HARV from start to finish:
+
+```bash
+# Navigate to repository
+cd /fs/ess/PUOM0017/ForestScaling/ScalingAcrossResolution
+
+# Set data stream
+export PRODUCT="NAIP"
+export SITE="HARV"
+
+# Stage 1: Crown datasets (~30 min for HARV)
+cd data_preparation
+bash GenerateDatasets_Batch.sh
+
+# Monitor
+watch -n 30 'squeue -u $USER'
+
+# Check progress
+ls ../data/CrownDatasets/HARV_NAIP*.csv | wc -l
+
+# Stage 2: LAI (skip if already done for HARV)
+Rscript ExtractGridLAI.R
+ls ../data/LAI/HARV_gridLAI.csv
+
+# Stage 3: Parameters (~2-3 hours for HARV)
+cd ../analysis
+sbatch Alpha_Slurm_multicore.sh
+
+# Monitor
+tail -f ../outfiles/out_*.out
+
+# Check results
+ls ../Results/Parameters/HARV/NAIP/Chunks/*.csv | wc -l
+
+# Stage 4: Aggregate results (script to be added)
+# Rscript AggregateResults.R NAIP HARV
+```
+
+---
+
+## Future Development
+
+### Planned Features
+- [ ] Result aggregation scripts (combine chunks)
+- [ ] Cross-product comparison analysis
+- [ ] Baseline validation scripts
+- [ ] DBH distribution comparisons
+- [ ] Spatial raster generation
+- [ ] Visualization notebooks
+- [ ] Quality control diagnostics
+
+### Planned Data Streams
+- [x] HARV - NAIP 30cm (complete)
+- [ ] HARV - NEON 10cm (in progress - baseline)
+- [ ] HARV - NAIP 60cm
+- [ ] HARV - MAXAR 30cm
+- [ ] BART - NEON 10cm
+- [ ] BART - NAIP 30cm
+
+---
+
+## Scientific Background
+
+### Size-Abundance Relationships
+
+Remote sensing-based crown segmentation systematically underdetects small trees due to canopy occlusion. While field-measured size distributions follow a negative power law (many small trees, few large trees), remotely sensed data show truncated distributions.
+
+**Our approach:**
+1. Identify size threshold (xbreakpoint) where detection becomes reliable
+2. Fit Pareto distribution to observable portion (DBH > xbreakpoint)
+3. Use Bayesian methods to infer abundance of missing understory trees
+4. Recover complete size-abundance relationships
+
+**Parameters:**
+- **α**: Describes steepness of size-abundance relationship (typical range: 1.3-1.6 for temperate forests)
+- **Ntot**: Total tree abundance above minimum size (typical range: 300-600 trees/ha)
+
+**Reference:** Eichenwald et al. (2025). Leveraging Remote Sensing and Theory to Predict Tree Size Abundance Distributions Across Space. *Global Ecology and Biogeography*, 34(8), e70085.
 
 ---
 
 ## Citation
 
-If you use this workflow in your research, please cite:
+If you use this workflow, please cite:
 
 - **ScalingFromSky Package:** [Repository link]
-- **Methodology:** Eichenwald et al. (2025). Leveraging Remote Sensing and Theory to Predict Tree Size Abundance Distributions Across Space. *Global Ecology and Biogeography*, 34(8), e70085.
-- **DeepForest:** Weinstein et al. (2019). Individual tree-crown detection in RGB imagery using semi-supervised deep learning neural networks. *Remote Sensing*, 11(11), 1309.
-
----
-
-## Contributing
-
-This is an active research project. We welcome:
-- Bug reports and fixes
-- Documentation improvements
-- Suggestions for analysis workflows
-- Extensions to new sites or products
-
-Please open an issue or pull request on GitHub.
-
----
-
-## License
-
-[Add license information]
+- **Methodology:** Eichenwald et al. (2025)
+- **DeepForest:** Weinstein et al. (2019)
+- **NEON Baseline:** Weinstein et al. (2021)
 
 ---
 
@@ -709,9 +591,6 @@ Please open an issue or pull request on GitHub.
 
 ---
 
-## Acknowledgments
+## License
 
-- NEON (National Ecological Observatory Network) for open data
-- Ben Weinstein for DeepForest and NEON tree crown baseline
-- ScalingFromSky package developers
-- [Funding sources]
+[Add license information]
