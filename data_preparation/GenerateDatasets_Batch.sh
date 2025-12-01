@@ -1,13 +1,13 @@
 #!/bin/bash
 
 ### --- USER SETTINGS ---
-PRODUCT="NAIP"
+PRODUCT="Weinstein" #NAIP, MAXAR, or Weinstein
 SITE="HARV"
 export PRODUCT
 export SITE
 
 ### --- AUTO-DETECT FILE COUNT ---
-FILES=(../DeepForest/Outputs/${PRODUCT}/${SITE}/*.shp)
+FILES=(../../DeepForest/Outputs/${PRODUCT}/${SITE}/*.shp)
 N=${#FILES[@]}
 
 echo "Number of files: ${N}"
