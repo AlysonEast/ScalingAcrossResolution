@@ -30,6 +30,12 @@ AOP<-st_read(paste0("./Shapefiles/",site,"_AOP.shp"))%>%
 grid <- st_make_grid(AOP, cellsize = 100, square = TRUE)
 grid <- st_sf(data.frame(grid_id=1:length(grid)), geometry = grid)
 grid <- st_intersection(AOP, grid)
+grid_dissolve <- grid %>% 
+  group_by(grid_id) %>% 
+  summarise(geometry = st_union(geometry))
+grid_dissolve <- st_make_valid(grid_dissolve)
+table(duplicated(grid_dissolve$grid_id))
+
 
 # file_list<-list.files(path = "../ScalingAcrossResolution/CrownDatasets/", pattern = paste0(site,"_",product), full.names=TRUE)
 # data_list <- lapply(file_list, read.csv)
@@ -82,14 +88,14 @@ for (i in 1:length(Tiles)) {
   }
   
   if (length(lai_avail) == 0) {
-    print(paste("No matching rasters for", poly_name))
-    next  # Skip if no rasters intersect
+    print(paste("No matching rasters for", neighbors))
+    next  # Skip if no raters intersect
   }
 
   #Grids overlapping tile
   grids_over_tile<-subset(grid,TileID==tile)$grid_id
   
-  grid_sub<-grid[grid$grid_id %in% grids_over_tile, ]
+  grid_sub<-grid_dissolve[grid_dissolve$grid_id %in% grids_over_tile, ]
   
   cat("Transforming grid to match raster...\n")
   target<-crs(merged_raster, describe=T)$code
@@ -102,3 +108,16 @@ for (i in 1:length(Tiles)) {
   LAI_df <- rbind(LAI_df, as.data.frame(grid_sub))
 }
 
+LAI_df_out <- LAI_df %>%
+  group_by(grid_id) %>%
+  slice(1) %>%
+  ungroup() 
+LAI_df_out<-as.data.frame(LAI_df_out)
+LAI_df_out<-LAI_df_out[,-c(2)]
+head(LAI_df_out)
+dim(LAI_df_out)
+LAI_df_out$lai_val<-LAI_df_out$lai$NEON_D01_HARV_DP3_722000_4705000_LAI
+LAI_df_out<-LAI_df_out[,-c(2)]
+head(LAI_df_out)
+
+write.csv(LAI_df_out,paste0("../ScalingAcrossResolution/LAIDatasets/",site,"_gridLAI.csv"))

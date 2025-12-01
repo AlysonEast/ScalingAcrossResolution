@@ -41,6 +41,8 @@ AOP<-st_read(paste0("./Shapefiles/",site,"_AOP.shp"))%>%
 grid <- st_make_grid(AOP, cellsize = 100, square = TRUE)
 grid <- st_sf(data.frame(grid_id=1:length(grid)), geometry = grid)
 grid <- st_intersection(AOP, grid)
+grid <- grid[st_geometry_type(grid) %in% c("POLYGON", "MULTIPOLYGON"), ]
+st_write(grid,paste0("./Shapefiles/",site,"_grid.shp"))
 
 cat("Grid created with", dim(table(grid$grid_id)), "cells.\n")
 

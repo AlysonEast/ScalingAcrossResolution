@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=CrownsDataset
-#SBATCH --time=0:10:00 #1 hour
+#SBATCH --time=0:45:00 #1 hour
 #SBATCH --mail-type=ALL
 #SBATCH --output=./outfiles/out_.%j
 #SBATCH --account=PUOM0017
