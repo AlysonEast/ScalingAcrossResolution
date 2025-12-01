@@ -43,7 +43,7 @@ setwd("/fs/ess/PUOM0017/ForestScaling/ScalingAcrossResolution")
 product <- "NAIP"
 site <- "HARV"
 
-files <- list.files("./CrownDatasets/", 
+files <- list.files("./data/CrownDatasets/", 
                     pattern = paste0(site,"_",product), 
                     full.names = TRUE)
 
@@ -55,7 +55,7 @@ df<-subset(df, image_path == "NAIP_30cm_HARV_7_725000_4705000.tif" |
              image_path == "NAIP_30cm_HARV_7_724000_4705000.tif"|
              image_path == "NAIP_30cm_HARV_7_725000_4706000.tif")
 
-lai_df <- read.csv(paste0("LAIDatasets/", site, "_gridLAI.csv"))
+lai_df <- read.csv(paste0("./data/LAI/", site, "_gridLAI.csv"))
 
 grid_list <- unique(df$grid_id)
 num_grids <- length(grid_list)
@@ -198,5 +198,5 @@ tree_results$site<-site
 print("posterior summary for N_tot:")
 print(tree_results)
 
-write.csv(alpha_results, paste0("./Results/",site,"_",product,"_chunck",task_id,"_alpha.csv"))
-write.csv(alpha_results, paste0("./Results/",site,"_",product,"_chunck",task_id,"_trees.csv"))
+write.csv(alpha_results, paste0("./Results/Parameters/",site,"/",product,"/Chunks/",site,"_",product,"_chunk",task_id,"_alpha.csv"))
+write.csv(alpha_results, paste0("./Results/Parameters/",site,"/",product,"/Chunks/",site,"_",product,"_chunk",task_id,"_trees.csv"))

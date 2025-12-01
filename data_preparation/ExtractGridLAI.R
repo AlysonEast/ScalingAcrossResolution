@@ -120,4 +120,4 @@ LAI_df_out$lai_val<-LAI_df_out$lai$NEON_D01_HARV_DP3_722000_4705000_LAI
 LAI_df_out<-LAI_df_out[,-c(2)]
 head(LAI_df_out)
 
-write.csv(LAI_df_out,paste0("../ScalingAcrossResolution/LAIDatasets/",site,"_gridLAI.csv"))
+write.csv(LAI_df_out,paste0("../ScalingAcrossResolution/data/LAI/",site,"_gridLAI.csv"))
