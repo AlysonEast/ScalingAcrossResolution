@@ -157,15 +157,7 @@ ScalingAcrossResolutions/
 │   ├── parameters/                    # Alpha/Ntot by product
 │   ├── comparisons/                   # Cross-product plots
 │   └── maps/                          # Spatial rasters
-├── notebooks/                         # R Markdown for exploration
-│   ├── 01_data_exploration.Rmd
-│   ├── 02_parameter_diagnostics.Rmd
-│   ├── 03_baseline_comparison.Rmd
-│   └── 04_cross_product_comparison.Rmd
-└── docs/
-    ├── workflow_diagram.png
-    ├── methodology.md
-    └── troubleshooting.md
+
 ```
 
 ---
@@ -187,9 +179,6 @@ install.packages(c("sf", "dplyr", "rstan", "posterior", "VGAM"))
 
 # Spatial processing
 install.packages(c("terra", "raster", "itcSegment"))
-
-# Optional (for notebooks)
-install.packages(c("ggplot2", "tidyr", "knitr", "rmarkdown"))
 ```
 
 **Data:**
@@ -197,18 +186,6 @@ install.packages(c("ggplot2", "tidyr", "knitr", "rmarkdown"))
 - NEON LAI data downloaded
 - Site shapefiles (AOP extent, grid definitions)
 
-### Configuration
-
-Edit `config/sites.yaml` and `config/products.yaml` to match your local paths:
-
-```yaml
-# config/sites.yaml
-HARV:
-  name: "Harvard Forest"
-  utm_zone: 32618
-  crown_seg_path: "../Crown_Segmentation"
-  aop_shapefile: "../Crown_Segmentation/Shapefiles/HARV_AOP.shp"
-```
 
 ### Running a Complete Data Stream (Example: HARV NAIP 30cm)
 
