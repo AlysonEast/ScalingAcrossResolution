@@ -108,10 +108,16 @@ dirs <- dirs[
   grepl("HARV", basename(dirname(dirs)))  # parent directory contains HARV
 ] 
 dirs[1]
-  
-chm<-raster(paste0(dirs[1],"/DiscreteLidar/CanopyHeightModelGtif/NEON_D01_",
+
+if (product=="Weinstein") {
+  chm<-raster(paste0(dirs[1],"/DiscreteLidar/CanopyHeightModelGtif/NEON_D01_",
+                     site,"_DP3_",
+                     substr(file, (nchar(file)-23), (nchar(file)-10)),"_CHM.tif"))
+} else{
+  chm<-raster(paste0(dirs[1],"/DiscreteLidar/CanopyHeightModelGtif/NEON_D01_",
                    site,"_DP3_",
                    substr(file, (nchar(file)-17), (nchar(file)-4)),"_CHM.tif"))
+}
 crowns$Max_Height <- raster::extract(chm, crowns, fun=max, na.rm=TRUE)
   
 ### DBH Calculation ####
@@ -121,9 +127,16 @@ df<-as.data.frame(crowns)
 crowns_assigned_df <- rbind(crowns_assigned_df, df)
 
 #### Final save ####
-out_file <- paste0("../ScalingAcrossResolution/data/CrownDatasets/",
+if (product=="Weinstein") {
+  out_file <- paste0("../ScalingAcrossResolution/data/CrownDatasets/",
+                     site, "_", product, "_trees_", 
+                     substr(file, (nchar(file)-23), (nchar(file)-10)),
+                     ".csv")
+}else {
+  out_file <- paste0("../ScalingAcrossResolution/data/CrownDatasets/",
                    site, "_", product, "_trees_", 
                    substr(file, (nchar(file)-17), (nchar(file)-4)),
                    ".csv")
+}
 write.csv(crowns_assigned_df[,-14], out_file, row.names = FALSE)
 cat("Final dataset written to", out_file, "\n")
