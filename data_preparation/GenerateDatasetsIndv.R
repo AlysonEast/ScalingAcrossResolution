@@ -121,7 +121,7 @@ df<-as.data.frame(crowns)
 crowns_assigned_df <- rbind(crowns_assigned_df, df)
 
 #### Final save ####
-out_file <- paste0("../ScalingAcrossResolution/CrownDatasets/",
+out_file <- paste0("../ScalingAcrossResolution/data/CrownDatasets/",
                    site, "_", product, "_trees_", 
                    substr(file, (nchar(file)-17), (nchar(file)-4)),
                    ".csv")
