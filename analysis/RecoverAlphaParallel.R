@@ -40,7 +40,7 @@ library(VGAM)
 
 setwd("/fs/ess/PUOM0017/ForestScaling/ScalingAcrossResolution")
 
-product <- "NAIP"
+product <-"NAIP" #"NAIP", "Weinstein", or "MAXAR"
 site <- "HARV"
 
 files <- list.files("./data/CrownDatasets/", 
@@ -54,6 +54,8 @@ df<-subset(df, image_path == "NAIP_30cm_HARV_7_725000_4705000.tif" |
              image_path == "NAIP_30cm_HARV_7_724000_4706000.tif" |
              image_path == "NAIP_30cm_HARV_7_724000_4705000.tif"|
              image_path == "NAIP_30cm_HARV_7_725000_4706000.tif")
+
+table(df$image_path)
 
 lai_df <- read.csv(paste0("./data/LAI/", site, "_gridLAI.csv"))
 
@@ -138,11 +140,11 @@ hist(table(df$grid_id))
 
 for (i in start_index:end_index) {#dim(table(df$grid_id))) {
   df_tile <- subset(df, grid_id == grid_list[i])
-  if (dim(df_tile)[1] < 75) {
-    print(paste("Not enough data to fit model", grid_list[i]))
-    next  # Skip if no raters intersect
-  }
-  cat("Grid ID: ", grid_list[i], "number ", i, " of 10","\n")
+  # if (dim(df_tile)[1] < 75) {
+  #   print(paste("Not enough data to fit model", grid_list[i]))
+  #   next  # Skip if no raters intersect
+  # }
+  cat("Grid ID: ", grid_list[i], "number ", i, " of ", end_index,"\n")
   cat("Number of crowns: ", dim(df_tile)[1],"\n")
   cat("DBH min: ", min(df_tile$DBH))
   cat(", mean: ", mean(df_tile$DBH))

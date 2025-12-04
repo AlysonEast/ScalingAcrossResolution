@@ -138,5 +138,10 @@ if (product=="Weinstein") {
                    substr(file, (nchar(file)-17), (nchar(file)-4)),
                    ".csv")
 }
-write.csv(crowns_assigned_df[,-14], out_file, row.names = FALSE)
-cat("Final dataset written to", out_file, "\n")
+if (product=="Weinstein") {
+  write.csv(crowns_assigned_df, out_file, row.names = FALSE)
+  cat("Final dataset written to", out_file, "\n")
+} else {
+  write.csv(crowns_assigned_df[,-14], out_file, row.names = FALSE)
+  cat("Final dataset written to", out_file, "\n")
+}
